@@ -18,37 +18,45 @@
 #   set :delayed_job_server_role, :worker
 #
 
-Capistrano::Configuration.instance.load do
-  namespace :delayed_job do
-    def rails_env
-      fetch(:rails_env, false) ? "RAILS_ENV=#{fetch(:rails_env)}" : ''
-    end
+namespace :delayed_job do
+  def args
+    fetch(:delayed_job_args, "")
+  end
 
-    def args
-      fetch(:delayed_job_args, "")
-    end
+  def delayed_job_roles
+    fetch(:delayed_job_server_role, :app)
+  end
 
-    def roles
-      fetch(:delayed_job_server_role, :app)
+  desc "Stop the delayed_job process"
+  task :stop do
+    on roles delayed_job_roles do
+      within release_path do
+        with rails_env: fetch(:rails_env) do
+          execute :delayed_job, 'stop'
+        end
+      end
     end
+  end
 
-    def delayed_job_command
-      fetch(:delayed_job_command, "script/delayed_job")
+  desc "Start the delayed_job process"
+  task :start do
+    on roles delayed_job_roles do
+      within release_path do
+        with rails_env: fetch(:rails_env) do
+          execute :delayed_job, "stop #{args}"
+        end
+      end
     end
+  end
 
-    desc "Stop the delayed_job process"
-    task :stop, :roles => lambda { roles } do
-      run "cd #{current_path};#{rails_env} #{delayed_job_command} stop"
-    end
-
-    desc "Start the delayed_job process"
-    task :start, :roles => lambda { roles } do
-      run "cd #{current_path};#{rails_env} #{delayed_job_command} start #{args}"
-    end
-
-    desc "Restart the delayed_job process"
-    task :restart, :roles => lambda { roles } do
-      run "cd #{current_path};#{rails_env} #{delayed_job_command} restart #{args}"
+  desc "Restart the delayed_job process"
+  task :restart do
+    on roles delayed_job_roles do
+      within release_path do
+        with rails_env: fetch(:rails_env) do
+          execute :delayed_job, "restart #{args}"
+        end
+      end
     end
   end
 end
